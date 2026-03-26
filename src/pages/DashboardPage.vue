@@ -40,10 +40,16 @@
         </div>
 
         <ul v-else class="recent-task-list">
+          
+           
+           
           <li v-for="task in limitedTasks" :key="task.id" class="recent-task-item">
             <div>
-              <h4>{{ task.title }}</h4>
-              <p>{{ task.description }}</p>
+              <router-link :to="`/tasks/${task.id}/edit`" class="list-link">
+                <h4>{{ task.title }}</h4>
+                </router-link>
+                <p>{{ task.description }}</p>
+              
             </div>
 
             <div class="task-actions">
@@ -53,20 +59,23 @@
               >
                 {{ task.status === 'completed' ? 'Tamamlandı' : 'Bekliyor' }}
               </span>
-
-              <button
+              <template v-if="task.assignedById === task.assignedUserId">
+                            <button
                 class="delete-btn"
                 type="button"
                 :disabled="deletingTaskIds.includes(task.id)"
-                aria-label="Gorevi sil"
+                aria-label="Görevi sil"
                 @click="removeTaskById(task.id)"
               >
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <path d="M9 3h6m-9 4h12m-1 0-.84 12.15a2 2 0 0 1-2 1.85h-4.32a2 2 0 0 1-2-1.85L6 7m4 4v6m4-6v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </button>
+              </template>
+
             </div>
           </li>
+          
         </ul>
       </div>
     </div>
@@ -162,6 +171,7 @@ onMounted(() => {
   border-radius: 12px;
   font-weight: 700;
   transition: 0.25s ease;
+  white-space: nowrap;
 }
 
 .add-task-btn:hover {
@@ -252,18 +262,22 @@ onMounted(() => {
 .recent-task-item h4 {
   margin: 0 0 6px;
   color: #111827;
+  word-break: break-word;
 }
 
 .recent-task-item p {
   margin: 0;
   color: #6b7280;
   line-height: 1.5;
+  word-break: break-word;
 }
 
 .task-actions {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .status-badge {
@@ -295,6 +309,7 @@ onMounted(() => {
   place-items: center;
   cursor: pointer;
   transition: background-color 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+  flex-shrink: 0;
 }
 
 .delete-btn svg {
@@ -322,20 +337,96 @@ onMounted(() => {
   border: 1px dashed #d1d5db;
 }
 
+.list-link {
+  text-decoration: none;
+}
+
+/* Tablet */
 @media (max-width: 900px) {
+  .dashboard-page {
+    padding: 28px 14px 40px;
+  }
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
+
+  .stat-card,
+  .content-card {
+    padding: 20px;
+  }
 }
 
+/* Mobile */
 @media (max-width: 640px) {
+  .dashboard-page {
+    padding: 22px 12px 32px;
+  }
+
+  .dashboard-header {
+    align-items: stretch;
+  }
+
   .dashboard-header h1 {
     font-size: 1.7rem;
+  }
+
+  .add-task-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .card-header {
+    align-items: flex-start;
   }
 
   .recent-task-item {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .task-actions {
+    justify-content: space-between;
+    width: 100%;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  .dashboard-page {
+    padding: 18px 10px 28px;
+  }
+
+  .dashboard-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .stat-card,
+  .content-card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .stat-card p {
+    font-size: 1.7rem;
+  }
+
+  .card-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .recent-task-item {
+    padding: 14px;
+  }
+
+  .status-badge {
+    font-size: 0.82rem;
+    padding: 7px 10px;
+  }
+
+  .delete-btn {
+    width: 32px;
+    height: 32px;
   }
 }
 </style>

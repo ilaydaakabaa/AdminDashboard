@@ -31,8 +31,7 @@ const router = useRouter()
 
 const token = computed(() => store.getters['auth/token'])
 const userId = computed(() => store.getters['auth/userId'])
-const tasks = computed(() => store.getters['tasks/tasks'])
-
+const tasks = computed(() => store.getters['tasks/myTasks'])
 async function removeTaskById(taskId) {
   try {
     await store.dispatch('tasks/removeTask', {
@@ -55,7 +54,7 @@ async function toggleTaskStatus(taskId) {
 
 function goToEditPage(taskId) {
   router.push(`/tasks/${taskId}/edit`)
-}
+ }
 
 onMounted(async () => {
   try {

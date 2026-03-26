@@ -3,6 +3,8 @@
     <TaskForm
       :initialTask="task"
       :isLoading="isLoading"
+      :users="users"
+      :currentUserId="userId"
       @submit="handleEditTask"
     />
   </section>
@@ -28,8 +30,17 @@ const taskId = route.params.id
 const token = computed(() => store.getters['auth/token'])
 const userId = computed(() => store.getters['auth/userId'])
 const task = computed(() => store.getters['tasks/getTaskById'](taskId))
+const users = computed(() => store.getters['tasks/users'])
 
 onMounted(async () => {
+  try {
+    await store.dispatch('tasks/fetchUsers', {
+      token: token.value
+    })
+  } catch (error) {
+    console.error(error)
+  }
+
   if (!store.getters['tasks/tasks'].length) {
     try {
       await store.dispatch('tasks/fetchTasks', {
@@ -51,6 +62,8 @@ async function handleEditTask(taskData) {
       title: taskData.title,
       description: taskData.description,
       status: taskData.status,
+      assignedUserId: taskData.assignedUserId,
+      deadline: taskData.deadline,
       token: token.value,
       userId: userId.value
     })

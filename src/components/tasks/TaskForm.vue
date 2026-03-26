@@ -31,7 +31,26 @@
           placeholder="Görev açıklamasını gir"
         ></textarea>
       </div>
-
+      <div class="form-control">
+        <label for="assignedUserId">Atanan Kullanıcı</label>
+        <select id="assignedUserId" v-model="assignedUserId">
+          <option
+            v-for="user in userOptions"
+            :key="user.id"
+            :value="user.id"
+          >
+            {{ user.id === currentUserId ? 'Kendime Ata' : user.email }}
+          </option>
+        </select>
+      </div>
+      <div class="form-control">
+        <label for="deadline">Son Tarih</label>
+        <input
+          id="deadline"
+          type="date"
+          v-model="deadline"
+        />
+      </div>
       <div class="form-control">
         <label for="status">Durum</label>
         <select id="status" v-model="status">
@@ -60,6 +79,14 @@ const props = defineProps({
   initialTask: {
     type: Object,
     default: null
+  },
+  users: {
+    type: Array,
+    default: () => []
+  },
+  currentUserId: {
+    type: String,
+    default: ''
   }
 })
 
@@ -68,9 +95,21 @@ const emit = defineEmits(['submit'])
 const title = ref('')
 const description = ref('')
 const status = ref('pending')
+const assignedUserId = ref('')
+const deadline = ref('')
 const error = ref('')
 
 const isEdit = computed(() => !!props.initialTask)
+const userOptions = computed(() => {
+  const list = props.users || []
+  const hasCurrentUser = list.some(user => user.id === props.currentUserId)
+
+  if (!hasCurrentUser && props.currentUserId) {
+    return [{ id: props.currentUserId, email: '' }, ...list]
+  }
+
+  return list
+})
 
 watch(
   () => props.initialTask,
@@ -78,6 +117,8 @@ watch(
     title.value = newTask?.title || ''
     description.value = newTask?.description || ''
     status.value = newTask?.status || 'pending'
+    assignedUserId.value = newTask?.assignedUserId || props.currentUserId || ''
+    deadline.value = newTask?.deadline || ''
   },
   { immediate: true }
 )
@@ -90,10 +131,22 @@ function submitForm() {
     return
   }
 
+  if (!assignedUserId.value) {
+    error.value = 'Lütfen atanacak kullanıcıyı seçin.'
+    return
+  }
+
+  if (!deadline.value) {
+    error.value = 'Lütfen son tarihi seçin.'
+    return
+  }
+
   emit('submit', {
     title: title.value,
     description: description.value,
-    status: status.value
+    status: status.value,
+    assignedUserId: assignedUserId.value,
+    deadline: deadline.value
   })
 }
 </script>

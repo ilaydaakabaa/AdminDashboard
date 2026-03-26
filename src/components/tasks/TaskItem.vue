@@ -3,38 +3,60 @@
     <div class="task-top">
       <h3>{{ task.title }}</h3>
 
-      <span
-        class="status-badge"
-        :class="task.status === 'completed' ? 'completed' : 'pending'"
-      >
+      <span class="status-badge" :class="task.status === 'completed' ? 'completed' : 'pending'">
         {{ task.status === 'completed' ? 'Tamamlandı' : 'Bekliyor' }}
       </span>
     </div>
 
     <p class="task-description">{{ task.description }}</p>
 
-    <div class="task-actions">
-      <button class="edit-btn" @click="$emit('edit', task.id)">
-        Düzenle
-      </button>
+    <div class="task-meta">
+      <p>
+        Son Tarih:
+        <strong>{{ formattedDeadline }}</strong>
+      </p>
+      <p>
+        Atayan:
+        <strong>{{ task.assignedByEmail || 'Bilinmiyor' }}</strong>
+      </p>
+    </div>
 
+    <div class="task-actions">
+      <template v-if="task.assignedById === task.assignedUserId">
+        <button class="edit-btn" @click="$emit('edit', task.id)">
+          Düzenle
+        </button>
+      </template>
       <button class="toggle-btn" @click="$emit('toggle-status', task.id)">
         {{ task.status === 'completed' ? 'Bekliyor Yap' : 'Tamamlandı Yap' }}
       </button>
+      <template v-if="task.assignedById === task.assignedUserId">
 
+      
       <button class="delete-btn" @click="$emit('delete', task.id)">
         Sil
       </button>
+      </template>
     </div>
   </article>
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
   task: {
     type: Object,
     required: true
   }
+})
+
+const formattedDeadline = computed(() => {
+  if (!props.task.deadline) {
+    return 'Belirtilmedi'
+  }
+
+  return new Date(props.task.deadline).toLocaleDateString('tr-TR')
 })
 
 defineEmits(['edit', 'toggle-status', 'delete'])
@@ -63,7 +85,25 @@ defineEmits(['edit', 'toggle-status', 'delete'])
 .task-description {
   color: #6b7280;
   line-height: 1.6;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
+}
+
+.task-meta {
+  margin-bottom: 14px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.task-meta p {
+  margin: 0;
+  color: #374151;
+  font-size: 0.92rem;
+}
+
+.task-meta p+p {
+  margin-top: 6px;
 }
 
 .status-badge {

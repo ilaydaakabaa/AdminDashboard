@@ -5,6 +5,7 @@ import RegisterPage from '@/pages/RegisterPage.vue'
 import DashboardPage from '@/pages/DashboardPage.vue'
 import TasksPage from '@/pages/TasksPage.vue'
 import AddTaskPage from '@/pages/AddTaskPage.vue'
+import AssigmentsPage from '@/pages/AssigmentsPage.vue'
 import HomePage from '@/pages/HomePage.vue'
 
 const router = createRouter({
@@ -16,6 +17,7 @@ const router = createRouter({
     { path: '/register', component: RegisterPage, meta: { requiresUnauth: true } },
     { path: '/dashboard', component: DashboardPage, meta: { requiresAuth: true } },
     { path: '/tasks', component: TasksPage, meta: { requiresAuth: true } },
+    { path: '/assignments', component: AssigmentsPage, meta: { requiresAuth: true } },
     { path: '/tasks/new', component: AddTaskPage, meta: { requiresAuth: true } },
     {
       path: '/tasks/:id/edit',

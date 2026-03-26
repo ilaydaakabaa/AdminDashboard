@@ -1,4 +1,24 @@
 const API_KEY = import.meta.env.VITE_FIREBASE_API_KEY
+const DATABASE_URL = import.meta.env.VITE_FIREBASE_DATABASE_URL
+
+async function syncUserProfile(userId, email, token) {
+  const profileResponse = await fetch(
+    `${DATABASE_URL}/users/${userId}.json?auth=${token}`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email
+      })
+    }
+  )
+
+  if (!profileResponse.ok) {
+    throw new Error('Kullanıcı profili eşitlenemedi.')
+  }
+}
 
 function calculateExpirationTime(expiresIn) {
   return new Date().getTime() + Number(expiresIn) * 1000
@@ -88,6 +108,8 @@ export default {
         tokenExpiration: expirationTime
       })
 
+      await syncUserProfile(responseData.localId, responseData.email, responseData.idToken)
+
     },
     async login({ commit }, payload) {
       const response = await fetch(
@@ -125,6 +147,9 @@ export default {
         refreshToken: responseData.refreshToken,
         tokenExpiration: expirationTime
       })
+
+      // Profil bilgilerini güncelleyerek, bu özellikten önce oluşturulan kullanıcıların da atananlar listesinde görünmesini sağlıyoruz
+      await syncUserProfile(responseData.localId, responseData.email, responseData.idToken)
 
     },
     logout({ commit }) {
