@@ -11,7 +11,7 @@
       </router-link>
     </div>
 
-    <div class="stats-grid">
+    <!-- <div class="stats-grid">
       <div class="stat-card">
         <h3>Toplam Görev</h3>
         <p>{{ totalTasks }}</p>
@@ -26,9 +26,21 @@
         <h3>Bekleyen</h3>
         <p>{{ pendingTasks.length }}</p>
       </div>
-    </div>
+    </div> -->
 
     <div class="dashboard-content">
+      <div class="charts-grid">
+        <TaskStatusChart
+          :completed="completedTasks.length"
+          :pending="pendingTasks.length"
+        />
+
+        <AssignedCompletedChart
+          :assigned="assignedByMeTasks.length"
+          :completed-assigned="completedAssignedByMeTasks"
+        />
+      </div>
+
       <div class="content-card">
         <div class="card-header">
           <h2>Son Görevler</h2>
@@ -85,6 +97,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useStore } from 'vuex'
+import TaskStatusChart from '@/components/ui/TaskStatusChart.vue'
+import AssignedCompletedChart from '@/components/ui/AssignedCompletedChart.vue'
 
 const store = useStore()
 
@@ -96,9 +110,14 @@ const tasks = computed(() => store.getters['tasks/tasks'])
 const totalTasks = computed(() => store.getters['tasks/totalTasks'])
 const completedTasks = computed(() => store.getters['tasks/completedTasks'])
 const pendingTasks = computed(() => store.getters['tasks/pendingTasks'])
+const assignedByMeTasks = computed(() => store.getters['tasks/assignedByMeTasks'])
 const deletingTaskIds = ref([])
 
-const limitedTasks = computed(() => tasks.value.slice(0, 5))
+const completedAssignedByMeTasks = computed(() => {
+  return assignedByMeTasks.value.filter(task => task.status === 'completed').length
+})
+
+const limitedTasks = computed(() => tasks.value.slice().reverse().slice(0, 5))
 
 async function removeTaskById(taskId) {
   if (deletingTaskIds.value.includes(taskId)) {
@@ -130,6 +149,11 @@ const welcomeName = computed(() => {
 
 onMounted(() => {
   store.dispatch('tasks/fetchTasks', {
+    token: token.value,
+    userId: userId.value
+  })
+
+  store.dispatch('tasks/fetchAssignedByMeTasks', {
     token: token.value,
     userId: userId.value
   })
@@ -207,8 +231,15 @@ onMounted(() => {
 }
 
 .dashboard-content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.charts-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
 }
 
 .content-card {
@@ -296,6 +327,18 @@ onMounted(() => {
 .status-badge.pending {
   background: #fef3c7;
   color: #92400e;
+}
+
+@media (max-width: 980px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .delete-btn {
