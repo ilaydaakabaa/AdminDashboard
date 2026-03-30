@@ -28,7 +28,7 @@
         <template v-else>
           <router-link to="/dashboard" class="nav-link" @click="closeMenu">Dashboard</router-link>
           <router-link to="/tasks" class="nav-link" @click="closeMenu">Tasks</router-link>
-          <router-link to="/assignments" class="nav-link" @click="closeMenu">Assignments</router-link>
+          <!-- <router-link to="/assignments" class="nav-link" @click="closeMenu">Assignments</router-link> -->
           <router-link to="/tasks/new" class="nav-link" @click="closeMenu">Add Task</router-link>
 
           <div class="user-box">

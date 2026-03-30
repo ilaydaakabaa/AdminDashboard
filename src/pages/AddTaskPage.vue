@@ -23,7 +23,7 @@ const isLoading = ref(false)
 const token = computed(() => store.getters['auth/token'])
 const userId = computed(() => store.getters['auth/userId'])
 const userEmail = computed(() => store.getters['auth/email'])
-const users = computed(() => store.getters['tasks/users'])
+const users = computed(() => store.getters['tasks/users'] || [])
 
 onMounted(async () => {
   try {
@@ -39,20 +39,25 @@ async function handleSubmitTask(taskData) {
   isLoading.value = true
 
   try {
+    const selectedUser = users.value.find(
+      user => user.id === taskData.assignedUserId
+    )
+
     await store.dispatch('tasks/addTask', {
       title: taskData.title,
       description: taskData.description,
-      status: taskData.status,
+      status: 'product-backlog',
       token: token.value,
       userId: userId.value,
-      assignedUserId: taskData.assignedUserId,
+      assignedUserId: taskData.assignedUserId || '',
+      assignedUserEmail: selectedUser?.email || '',
       assignedById: userId.value,
       assignedByEmail: userEmail.value,
-      deadline: taskData.deadline
-
+      deadline: taskData.deadline || '',
+      order: Date.now()
     })
 
-    router.push('/tasks')
+    router.push('/home')
   } catch (error) {
     console.error(error)
   } finally {

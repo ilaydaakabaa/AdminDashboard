@@ -6,7 +6,7 @@
         {{
           isEdit
             ? 'Görev bilgilerini güncelleyebilirsin.'
-            : 'Yeni görev ekleyerek çalışma planını düzenli tutabilirsin.'
+            : 'Hızlıca yeni görev ekleyebilirsin. Görev otomatik olarak Product Backlog alanına düşer.'
         }}
       </p>
     </div>
@@ -31,9 +31,11 @@
           placeholder="Görev açıklamasını gir"
         ></textarea>
       </div>
+
       <div class="form-control">
         <label for="assignedUserId">Atanan Kullanıcı</label>
         <select id="assignedUserId" v-model="assignedUserId">
+          <option value="">Şimdilik kimseye atama</option>
           <option
             v-for="user in userOptions"
             :key="user.id"
@@ -43,6 +45,7 @@
           </option>
         </select>
       </div>
+
       <div class="form-control">
         <label for="deadline">Son Tarih</label>
         <input
@@ -50,13 +53,6 @@
           type="date"
           v-model="deadline"
         />
-      </div>
-      <div class="form-control">
-        <label for="status">Durum</label>
-        <select id="status" v-model="status">
-          <option value="pending">Bekliyor</option>
-          <option value="completed">Tamamlandı</option>
-        </select>
       </div>
 
       <p v-if="error" class="error-message">{{ error }}</p>
@@ -94,12 +90,12 @@ const emit = defineEmits(['submit'])
 
 const title = ref('')
 const description = ref('')
-const status = ref('pending')
 const assignedUserId = ref('')
 const deadline = ref('')
 const error = ref('')
 
 const isEdit = computed(() => !!props.initialTask)
+
 const userOptions = computed(() => {
   const list = props.users || []
   const hasCurrentUser = list.some(user => user.id === props.currentUserId)
@@ -116,8 +112,7 @@ watch(
   (newTask) => {
     title.value = newTask?.title || ''
     description.value = newTask?.description || ''
-    status.value = newTask?.status || 'pending'
-    assignedUserId.value = newTask?.assignedUserId || props.currentUserId || ''
+    assignedUserId.value = newTask?.assignedUserId || ''
     deadline.value = newTask?.deadline || ''
   },
   { immediate: true }
@@ -127,26 +122,16 @@ function submitForm() {
   error.value = ''
 
   if (!title.value || !description.value) {
-    error.value = 'Lütfen tüm alanları doldurun.'
-    return
-  }
-
-  if (!assignedUserId.value) {
-    error.value = 'Lütfen atanacak kullanıcıyı seçin.'
-    return
-  }
-
-  if (!deadline.value) {
-    error.value = 'Lütfen son tarihi seçin.'
+    error.value = 'Lütfen başlık ve açıklama alanlarını doldurun.'
     return
   }
 
   emit('submit', {
     title: title.value,
     description: description.value,
-    status: status.value,
-    assignedUserId: assignedUserId.value,
-    deadline: deadline.value
+    status: 'product-backlog',
+    assignedUserId: assignedUserId.value || '',
+    deadline: deadline.value || ''
   })
 }
 </script>

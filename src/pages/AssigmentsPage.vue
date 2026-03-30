@@ -17,12 +17,13 @@
       <article v-for="task in tasks" :key="task.id" class="task-card">
         <div class="task-top">
           <h3>{{ task.title }}</h3>
-          <span class="status-badge" :class="task.status === 'completed' ? 'completed' : 'pending'">
-            {{ task.status === 'completed' ? 'Tamamlandi' : 'Bekliyor' }}
+          <span class="status-badge" :class="task.status === 'done' ? 'completed' : 'pending'">
+            {{ task.status === 'done' ? 'Tamamlandi' : 'Bekliyor' }}
           </span>
         </div>
 
         <p class="task-description">{{ task.description }}</p>
+        
 
         <div class="task-meta">
           <p><strong>Atanan:</strong> {{ getUserEmail(task.assignedUserId) }}</p>
@@ -50,7 +51,16 @@ const store = useStore()
 
 const token = computed(() => store.getters['auth/token'])
 const userId = computed(() => store.getters['auth/userId'])
-const tasks = computed(() => store.getters['tasks/assignedByMeTasksSortedByDeadline'])
+const allTasks = computed(() => store.getters['tasks/tasks'] || [])
+const tasks = computed(() => {
+  return [...allTasks.value]
+    .filter(task => task.assignedById === userId.value)
+    .sort((a, b) => {
+      const aTime = a.deadline ? new Date(a.deadline).getTime() : Number.POSITIVE_INFINITY
+      const bTime = b.deadline ? new Date(b.deadline).getTime() : Number.POSITIVE_INFINITY
+      return aTime - bTime
+    })
+})
 const users = computed(() => store.getters['tasks/users'])
 
 const isLoading = ref(false)
@@ -78,7 +88,7 @@ onMounted(async () => {
       store.dispatch('tasks/fetchUsers', {
         token: token.value
       }),
-      store.dispatch('tasks/fetchAssignedByMeTasks', {
+      store.dispatch('tasks/fetchTasks', {
         token: token.value,
         userId: userId.value
       })
@@ -89,6 +99,18 @@ onMounted(async () => {
     isLoading.value = false
   }
 })
+
+async function deleteColumn(columnId) {
+  try {
+    await store.dispatch('tasks/deleteColumn', {
+      columnId,
+      userId: userId.value,
+      token: token.value
+    })
+  } catch (err) {
+    error.value = err.message || 'Sütun silinemedi.'
+  }
+}
 </script>
 
 <style scoped>

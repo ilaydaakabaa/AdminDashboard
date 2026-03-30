@@ -11,13 +11,13 @@ import HomePage from '@/pages/HomePage.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-
-    { path: '/', component: HomePage },
+    { path: '/', redirect: '/home' },
+    { path: '/home', component:   HomePage, meta: { requiresAuth: true } },
     { path: '/login', component: LoginPage, meta: { requiresUnauth: true } },
     { path: '/register', component: RegisterPage, meta: { requiresUnauth: true } },
     { path: '/dashboard', component: DashboardPage, meta: { requiresAuth: true } },
     { path: '/tasks', component: TasksPage, meta: { requiresAuth: true } },
-    { path: '/assignments', component: AssigmentsPage, meta: { requiresAuth: true } },
+    // { path: '/assignments', component: AssigmentsPage, meta: { requiresAuth: true } },
     { path: '/tasks/new', component: AddTaskPage, meta: { requiresAuth: true } },
     {
       path: '/tasks/:id/edit',
@@ -35,7 +35,7 @@ router.beforeEach((to, from) => {
   }
 
   if (to.meta.requiresUnauth && isAuthenticated) {
-    return '/dashboard'
+    return '/home'
   }
 
   return true

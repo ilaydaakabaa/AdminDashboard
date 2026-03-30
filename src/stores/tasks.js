@@ -1,12 +1,21 @@
 const DATABASE_URL = import.meta.env.VITE_FIREBASE_DATABASE_URL
 
+function createColumnId(title) {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+}
+
 export default {
   namespaced: true,
 
   state() {
     return {
       tasks: [],
-      assignedByMeTasks: [],
+      //assignedByMeTasks: [],
+      columns: [],
       users: []
     }
   },
@@ -18,12 +27,9 @@ export default {
     addTask(state, payload) {
       state.tasks.push(payload)
     },
-    removeTask(state, taskId) {
-      state.tasks = state.tasks.filter(task => task.id !== taskId)
-    },
-    editTask(state, payload) {
+    updateTask(state, payload) {
       const taskIndex = state.tasks.findIndex(task => task.id === payload.id)
-
+      
       if (taskIndex !== -1) {
         state.tasks[taskIndex] = {
           ...state.tasks[taskIndex],
@@ -31,11 +37,43 @@ export default {
         }
       }
     },
+      removeTask(state, taskId) {
+      state.tasks = state.tasks.filter(task => task.id !== taskId)
+    },
+    // editTask(state, payload) {
+    //   const taskIndex = state.tasks.findIndex(task => task.id === payload.id)
+
+    //   if (taskIndex !== -1) {
+    //     state.tasks[taskIndex] = {
+    //       ...state.tasks[taskIndex],
+    //       ...payload
+    //     }
+    //   }
+    // },
     setUsers(state, payload) {
       state.users = payload
     },
-    setAssignedByMeTasks(state, payload) {
-      state.assignedByMeTasks = payload
+    // setAssignedByMeTasks(state, payload) {
+    //   state.assignedByMeTasks = payload
+    // }
+     setColumns(state, payload) {
+      state.columns = payload
+    },
+    addColumn(state, payload) {
+      state.columns.push(payload)
+    },
+    updateColumn(state, payload) {
+      const columnIndex = state.columns.findIndex(column => column.id === payload.id)
+
+      if (columnIndex !== -1) {
+        state.columns[columnIndex] = {
+          ...state.columns[columnIndex],
+          ...payload
+        }
+      }
+    },
+    removeColumn(state, columnId) {
+      state.columns = state.columns.filter(column => column.id !== columnId)
     }
   },
 
@@ -47,16 +85,21 @@ export default {
       return state.tasks.length
     },
     completedTasks(state) {
-      return state.tasks.filter(task => task.status === 'completed')
+      return state.tasks.filter(task => task.status === 'done')
     },
     pendingTasks(state) {
-      return state.tasks.filter(task => task.status === 'pending')
+      return state.tasks.filter(task => task.status !== 'done')
     },
     getTaskById: (state) => (taskId) => {
       return state.tasks.find(task => task.id === taskId)
     },
     myTasks: (state, getters, rootState) => {
       return state.tasks.filter(task => task.assignedUserId === rootState.auth.userId)
+    },
+     tasksByColumn: (state) => (columnId) => {
+      return [...state.tasks]
+        .filter(task => task.status === columnId)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     },
     myTasksSortedByDeadline: (state, getters) => {
       return [...getters.myTasks].sort((a, b) => {
@@ -65,19 +108,37 @@ export default {
         return aTime - bTime
       })
     },
-    assignedByMeTasks(state) {
-      return state.assignedByMeTasks
-    },
-    assignedByMeTasksSortedByDeadline(state) {
-      return [...state.assignedByMeTasks].sort((a, b) => {
-        const aTime = a.deadline ? new Date(a.deadline).getTime() : Number.POSITIVE_INFINITY
-        const bTime = b.deadline ? new Date(b.deadline).getTime() : Number.POSITIVE_INFINITY
-        return aTime - bTime
-      })
-    },
+    productBacklogTasks(state) {
+  return state.tasks.filter(task => task.status === 'product-backlog')
+},
+sprintBacklogTasks(state) {
+  return state.tasks.filter(task => task.status === 'sprint-backlog')
+},
+testTasks(state) {
+  return state.tasks.filter(task => task.status === 'test')
+},
+doneTasks(state) {
+  return state.tasks.filter(task => task.status === 'done')
+},
+columns(state) {
+  return [...state.columns].sort((a, b) => a.order - b.order)
+},
+    // assignedByMeTasks(state) {
+    //   return state.assignedByMeTasks
+    // },
+    // assignedByMeTasksSortedByDeadline(state) {
+    //   return [...state.assignedByMeTasks].sort((a, b) => {
+    //     const aTime = a.deadline ? new Date(a.deadline).getTime() : Number.POSITIVE_INFINITY
+    //     const bTime = b.deadline ? new Date(b.deadline).getTime() : Number.POSITIVE_INFINITY
+    //     return aTime - bTime
+    //   })
+    // },
     users(state) {
       return state.users
-    }
+    },
+    // columns(state) {
+    //   return state.columns
+    // }
   },
 
   actions: {
@@ -144,41 +205,117 @@ export default {
 
       commit('setUsers', loadedUsers)
     },
-    async fetchTasks({ commit }, payload) {
-      const response = await fetch(
-        `${DATABASE_URL}/tasks/${payload.userId}.json?auth=${payload.token}`
-      )
+   
 
-      const responseData = await response.json()
+async fetchColumns({ commit }, payload) {
+  const response = await fetch(
+    `${DATABASE_URL}/home/${payload.userId}/columns.json?auth=${payload.token}`
+  )
 
-      if (!response.ok) {
-        throw new Error('Görevler alınamadı.')
+  const responseData = await response.json()
+
+  if (!response.ok) {
+    throw new Error('Kolonlar alınamadı.')
+  }
+
+  if (!responseData) {
+    const defaultColumns = {
+      'product-backlog': {
+        id: 'product-backlog',
+        title: 'Product Backlog',
+        order: 1
+      },
+      'sprint-backlog': {
+        id: 'sprint-backlog',
+        title: 'Sprint Backlog',
+        order: 2
+      },
+      'test': {
+        id: 'test',
+        title: 'Test',
+        order: 3
+      },
+      'done': {
+        id: 'done',
+        title: 'Done',
+        order: 4
       }
+    }
 
-      const loadedTasks = []
-
-      if (responseData) {
-        for (const key in responseData) {
-          loadedTasks.push({
-            id: key,
-            title: responseData[key].title,
-            description: responseData[key].description,
-            status: responseData[key].status,
-            assignedUserId: responseData[key].assignedUserId,
-            assignedById: responseData[key].assignedById,
-            assignedByEmail: responseData[key].assignedByEmail,
-            createdBy: responseData[key].createdBy,
-            deadline: responseData[key].deadline
-          })
-        }
+    const createResponse = await fetch(
+      `${DATABASE_URL}/home/${payload.userId}/columns.json?auth=${payload.token}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(defaultColumns)
       }
+    )
 
-      commit('setTasks', loadedTasks)
-    },
+    if (!createResponse.ok) {
+      throw new Error('Varsayılan kolonlar oluşturulamadı.')
+    }
 
+    commit(
+      'setColumns',
+      Object.values(defaultColumns).sort((a, b) => a.order - b.order)
+    )
+    return
+  }
+
+  const loadedColumns = []
+
+  for (const key in responseData) {
+    loadedColumns.push({
+      id: responseData[key].id,
+      title: responseData[key].title,
+      order: responseData[key].order
+    })
+  }
+
+  loadedColumns.sort((a, b) => a.order - b.order)
+
+  commit('setColumns', loadedColumns)
+},
+async fetchTasks({ commit }, payload) {
+  const response = await fetch(
+    `${DATABASE_URL}/home/${payload.userId}/tasks.json?auth=${payload.token}`
+  )
+
+  const responseData = await response.json()
+
+  if (!response.ok) {
+    throw new Error('Görevler alınamadı.')
+  }
+
+  const loadedTasks = []
+
+  if (responseData) {
+    for (const key in responseData) {
+      loadedTasks.push({
+        id: key,
+        title: responseData[key].title,
+        description: responseData[key].description,
+        status: responseData[key].status || 'product-backlog',
+        assignedUserId: responseData[key].assignedUserId || '',
+        assignedUserEmail: responseData[key].assignedUserEmail || '',
+        assignedById: responseData[key].assignedById || '',
+        assignedByEmail: responseData[key].assignedByEmail || '',
+        deadline: responseData[key].deadline || '',
+        order: responseData[key].order ?? 0,
+        createdAt: responseData[key].createdAt ?? Date.now()
+      })
+    }
+  }
+
+  loadedTasks.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
+
+  commit('setTasks', loadedTasks)
+},
     async addTask({ commit }, payload) {
       const response = await fetch(
-        `${DATABASE_URL}/tasks/${payload.assignedUserId}.json?auth=${payload.token}`,
+        `${DATABASE_URL}/home/${payload.userId}/tasks.json?auth=${payload.token}`,
         {
           method: 'POST',
           headers: {
@@ -187,12 +324,14 @@ export default {
           body: JSON.stringify({
             title: payload.title,
             description: payload.description,
-            status: payload.status,
-            assignedUserId: payload.assignedUserId,
-            assignedById: payload.assignedById,
-            assignedByEmail: payload.assignedByEmail,
-            createdBy: payload.userId,
-            deadline: payload.deadline
+            status: payload.status || 'product-backlog',
+            assignedUserId: payload.assignedUserId || '',
+            assignedUserEmail: payload.assignedUserEmail || '',
+            assignedById: payload.assignedById || '',
+            assignedByEmail: payload.assignedByEmail || '',
+            deadline: payload.deadline || '',
+            order: payload.order ?? Date.now(),
+            createdAt: Date.now()
           })
         }
       )
@@ -207,17 +346,83 @@ export default {
         id: responseData.name,
         title: payload.title,
         description: payload.description,
+        status: payload.status || 'product-backlog',
+        assignedUserId: payload.assignedUserId || '',
+        assignedUserEmail: payload.assignedUserEmail || '',
+        assignedById: payload.assignedById || '',
+        assignedByEmail: payload.assignedByEmail || '',
+        deadline: payload.deadline || '',
+        order: payload.order ?? Date.now(),
+        createdAt: Date.now()
+      })
+    },
+    
+    async updateTaskDeadline({ commit }, payload) {
+  const response = await fetch(
+    `${DATABASE_URL}/home/${payload.userId}/tasks/${payload.id}.json?auth=${payload.token}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        deadline: payload.deadline || ''
+      })
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error('Deadline güncellenemedi.')
+  }
+
+  commit('updateTask', {
+    id: payload.id,
+    deadline: payload.deadline || ''
+  })
+},
+    async editTask({ commit }, payload) {
+      const response = await fetch(
+        `${DATABASE_URL}/home/${payload.userId}/tasks/${payload.id}.json?auth=${payload.token}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            title: payload.title,
+            description: payload.description,
+            status: payload.status,
+            assignedUserId: payload.assignedUserId || '',
+            assignedUserEmail: payload.assignedUserEmail || '',
+            assignedById: payload.assignedById || '',
+            assignedByEmail: payload.assignedByEmail || '',
+            deadline: payload.deadline || '',
+            order: payload.order ?? 0
+          })
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Görev güncellenemedi.')
+      }
+
+      commit('updateTask', {
+        id: payload.id,
+        title: payload.title,
+        description: payload.description,
         status: payload.status,
-        assignedUserId: payload.assignedUserId,
-        assignedById: payload.assignedById,
-        assignedByEmail: payload.assignedByEmail,
-        deadline: payload.deadline
+        assignedUserId: payload.assignedUserId || '',
+        assignedUserEmail: payload.assignedUserEmail || '',
+        assignedById: payload.assignedById || '',
+        assignedByEmail: payload.assignedByEmail || '',
+        deadline: payload.deadline || '',
+        order: payload.order ?? 0
       })
     },
 
-    async removeTask({ commit }, payload) {
+    async deleteTask({ commit }, payload) {
       const response = await fetch(
-        `${DATABASE_URL}/tasks/${payload.userId}/${payload.taskId}.json?auth=${payload.token}`,
+        `${DATABASE_URL}/home/${payload.userId}/tasks/${payload.taskId}.json?auth=${payload.token}`,
         {
           method: 'DELETE'
         }
@@ -230,59 +435,70 @@ export default {
       commit('removeTask', payload.taskId)
     },
 
-    async editTask({ commit }, payload) {
-      const response = await fetch(
-        `${DATABASE_URL}/tasks/${payload.assignedUserId}/${payload.id}.json?auth=${payload.token}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            title: payload.title,
-            description: payload.description,
-            status: payload.status,
-            assignedUserId: payload.assignedUserId,
-            deadline: payload.deadline
-          })
-        }
-      )
-
-      const responseData = await response.json()
-
-      if (!response.ok) {
-        throw new Error('Görev güncellenemedi.')
-      }
-
-      commit('editTask', {
-        id: payload.id,
-        title: payload.title,
-        description: payload.description,
-        status: payload.status,
-        assignedUserId: payload.assignedUserId,
-        deadline: payload.deadline
-      })
-    },
-
-    async toggleTaskStatus({ dispatch, getters, rootGetters }, taskId) {
-      const task = getters.getTaskById(taskId)
+    async moveTaskToColumn({ dispatch, getters }, payload) {
+      const task = getters.getTaskById(payload.taskId)
 
       if (!task) {
         throw new Error('Görev bulunamadı.')
       }
 
-      const newStatus = task.status === 'completed' ? 'pending' : 'completed'
-
       await dispatch('editTask', {
         id: task.id,
         title: task.title,
         description: task.description,
-        status: newStatus,
+        status: payload.newColumnId,
         assignedUserId: task.assignedUserId,
-        deadline: task.deadline,
-        token: rootGetters['auth/token'],
-        userId: rootGetters['auth/userId']
+        assignedUserEmail: task.assignedUserEmail || '',
+        assignedById: task.assignedById,
+        assignedByEmail: task.assignedByEmail,
+        deadline: task.deadline || '',
+        order: payload.newOrder ?? Date.now(),
+        userId: payload.userId,
+        token: payload.token
       })
+    },
+
+    async addColumn({ commit }, payload) {
+      const columnId = payload.id
+      const response = await fetch(
+        `${DATABASE_URL}/home/${payload.userId}/columns/${columnId}.json?auth=${payload.token}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            id: payload.id,
+            title: payload.title,
+            order: payload.order
+          })
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Sütun eklenemedi.')
+      }
+
+      commit('addColumn', {
+        id: payload.id,
+        title: payload.title,
+        order: payload.order
+      })
+    },
+
+    async deleteColumn({ commit }, payload) {
+      const response = await fetch(
+        `${DATABASE_URL}/home/${payload.userId}/columns/${payload.columnId}.json?auth=${payload.token}`,
+        {
+          method: 'DELETE'
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Sütun silinemedi.')
+      }
+
+      commit('removeColumn', payload.columnId)
     }
   }
 }

@@ -3,15 +3,21 @@
     <div class="dashboard-header">
       <div>
         <h1>Dashboard</h1>
-        <p v-if="email">Tekrar hoş geldin, {{ welcomeName}}</p>
+        <p v-if="email">Tekrar hoş geldin, {{ welcomeName }}</p>
       </div>
 
-      <router-link to="/tasks/new" class="add-task-btn">
-        + Yeni Görev
-      </router-link>
+      <div class="header-actions">
+        <router-link to="/" class="board-btn">
+          Board'a Git
+        </router-link>
+
+        <button class="add-task-btn" type="button" @click="openQuickTaskModal">
+          + Yeni Görev
+        </button>
+      </div>
     </div>
 
-    <!-- <div class="stats-grid">
+    <div class="stats-grid">
       <div class="stat-card">
         <h3>Toplam Görev</h3>
         <p>{{ totalTasks }}</p>
@@ -23,28 +29,23 @@
       </div>
 
       <div class="stat-card">
-        <h3>Bekleyen</h3>
+        <h3>Devam Eden</h3>
         <p>{{ pendingTasks.length }}</p>
       </div>
-    </div> -->
+    </div>
 
     <div class="dashboard-content">
       <div class="charts-grid">
-        <TaskStatusChart
-          :completed="completedTasks.length"
-          :pending="pendingTasks.length"
-        />
+        <TaskStatusChart :product-backlog="productBacklogTasks.length" :sprint-backlog="sprintBacklogTasks.length"
+          :test="testTasks.length" :done="doneTasks.length" />
 
-        <AssignedCompletedChart
-          :assigned="assignedByMeTasks.length"
-          :completed-assigned="completedAssignedByMeTasks"
-        />
+        <AssignedCompletedChart :assigned="assignedByMeTasks.length" :completed-assigned="completedAssignedByMeTasks" />
       </div>
 
       <div class="content-card">
         <div class="card-header">
           <h2>Son Görevler</h2>
-          <router-link to="/tasks">Tümünü Gör</router-link>
+          <router-link to="/home">Board'u Gör</router-link>
         </div>
 
         <div v-if="tasks.length === 0" class="empty-state">
@@ -52,43 +53,99 @@
         </div>
 
         <ul v-else class="recent-task-list">
-          
-           
-           
           <li v-for="task in limitedTasks" :key="task.id" class="recent-task-item">
-            <div>
-              <router-link :to="`/tasks/${task.id}/edit`" class="list-link">
-                <h4>{{ task.title }}</h4>
-                </router-link>
-                <p>{{ task.description }}</p>
-              
+            <div class="task-main">
+              <h4>{{ task.title }}</h4>
+              <p>{{ task.description || 'Açıklama yok.' }}</p>
+
+              <div class="task-meta">
+                <span class="meta-chip">
+                  Kolon: {{ getColumnTitle(task.status) }}
+                </span>
+
+                <span class="meta-chip" v-if="task.assignedUserEmail">
+                  Atanan: {{ task.assignedUserEmail }}
+                </span>
+
+                <span class="meta-chip" v-if="task.deadline">
+                  Bitiş: {{ task.deadline }}
+                </span>
+              </div>
             </div>
 
             <div class="task-actions">
-              <span
-                class="status-badge"
-                :class="task.status === 'completed' ? 'completed' : 'pending'"
-              >
-                {{ task.status === 'completed' ? 'Tamamlandı' : 'Bekliyor' }}
+              <span class="status-badge" :class="task.status === 'done' ? 'completed' : 'pending'">
+                {{ task.status === 'done' ? 'Tamamlandı' : getColumnTitle(task.status) }}
               </span>
-              <template v-if="task.assignedById === task.assignedUserId">
-                            <button
-                class="delete-btn"
-                type="button"
-                :disabled="deletingTaskIds.includes(task.id)"
-                aria-label="Görevi sil"
-                @click="removeTaskById(task.id)"
-              >
+
+              <button class="delete-btn" type="button" :disabled="deletingTaskIds.includes(task.id)"
+                aria-label="Görevi sil" @click="removeTaskById(task.id)">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <path d="M9 3h6m-9 4h12m-1 0-.84 12.15a2 2 0 0 1-2 1.85h-4.32a2 2 0 0 1-2-1.85L6 7m4 4v6m4-6v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M9 3h6m-9 4h12m-1 0-.84 12.15a2 2 0 0 1-2 1.85h-4.32a2 2 0 0 1-2-1.85L6 7m4 4v6m4-6v6"
+                    stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </button>
-              </template>
-
             </div>
           </li>
-          
         </ul>
+      </div>
+    </div>
+
+    <div v-if="showQuickTaskModal" class="modal-overlay" @click.self="closeQuickTaskModal">
+      <div class="task-modal">
+        <div class="modal-header">
+          <h2>Hızlı Görev Ekle</h2>
+          <button class="close-btn" type="button" @click="closeQuickTaskModal">
+            Kapat
+          </button>
+        </div>
+
+        <div class="modal-form">
+          <div class="form-group">
+            <label>Başlık</label>
+            <input v-model="quickTask.title" type="text" placeholder="Görev başlığı" />
+          </div>
+
+          <div class="form-group">
+            <label>Açıklama</label>
+            <textarea v-model="quickTask.description" rows="4" placeholder="Görev açıklaması" />
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Sütun</label>
+              <select v-model="quickTask.status">
+                <option v-for="column in columns" :key="column.id" :value="column.id">
+                  {{ column.title }}
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Kişiye Ata</label>
+              <select v-model="quickTask.assignedUserId">
+                <option value="">Kişi seç</option>
+                <option v-for="user in users" :key="user.id" :value="user.id">
+                  {{ user.email }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Bitiş Tarihi</label>
+            <input v-model="quickTask.deadline" type="date" />
+          </div>
+
+          <div class="modal-actions">
+            <button class="secondary-btn" type="button" @click="closeQuickTaskModal">
+              Vazgeç
+            </button>
+            <button class="primary-btn" type="button" @click="createQuickTask">
+              Kaydet
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -106,18 +163,95 @@ const email = computed(() => store.getters['auth/email'])
 const token = computed(() => store.getters['auth/token'])
 const userId = computed(() => store.getters['auth/userId'])
 
-const tasks = computed(() => store.getters['tasks/tasks'])
-const totalTasks = computed(() => store.getters['tasks/totalTasks'])
-const completedTasks = computed(() => store.getters['tasks/completedTasks'])
-const pendingTasks = computed(() => store.getters['tasks/pendingTasks'])
-const assignedByMeTasks = computed(() => store.getters['tasks/assignedByMeTasks'])
-const deletingTaskIds = ref([])
+const tasks = computed(() => store.getters['tasks/tasks'] || [])
+const totalTasks = computed(() => store.getters['tasks/totalTasks'] || 0)
+const completedTasks = computed(() => store.getters['tasks/completedTasks'] || [])
+const pendingTasks = computed(() => store.getters['tasks/pendingTasks'] || [])
+const users = computed(() => store.getters['tasks/users'] || [])
+const columns = computed(() => store.getters['tasks/columns'] || [])
+const productBacklogTasks = computed(() => store.getters['tasks/productBacklogTasks'] || [])
+const sprintBacklogTasks = computed(() => store.getters['tasks/sprintBacklogTasks'] || [])
+const testTasks = computed(() => store.getters['tasks/testTasks'] || [])
+const doneTasks = computed(() => store.getters['tasks/doneTasks'] || [])
 
-const completedAssignedByMeTasks = computed(() => {
-  return assignedByMeTasks.value.filter(task => task.status === 'completed').length
+const deletingTaskIds = ref([])
+const showQuickTaskModal = ref(false)
+
+const quickTask = ref({
+  title: '',
+  description: '',
+  status: 'product-backlog',
+  assignedUserId: '',
+  deadline: ''
 })
 
-const limitedTasks = computed(() => tasks.value.slice().reverse().slice(0, 5))
+const assignedByMeTasks = computed(() => {
+  return tasks.value.filter(task => task.assignedById === userId.value)
+})
+
+const completedAssignedByMeTasks = computed(() => {
+  return assignedByMeTasks.value.filter(task => task.status === 'done').length
+})
+
+const limitedTasks = computed(() => {
+  return [...tasks.value]
+    .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
+    .slice(0, 5)
+})
+
+const welcomeName = computed(() => {
+  if (!email.value) return ''
+  const namePart = email.value.split('@')[0]
+  return namePart.charAt(0).toUpperCase() + namePart.slice(1)
+})
+
+function getColumnTitle(columnId) {
+  const foundColumn = columns.value.find(column => column.id === columnId)
+  return foundColumn ? foundColumn.title : columnId
+}
+
+function openQuickTaskModal() {
+  quickTask.value = {
+    title: '',
+    description: '',
+    status: columns.value[0]?.id || 'product-backlog',
+    assignedUserId: '',
+    deadline: ''
+  }
+  showQuickTaskModal.value = true
+}
+
+function closeQuickTaskModal() {
+  showQuickTaskModal.value = false
+}
+
+async function createQuickTask() {
+  if (!quickTask.value.title.trim()) return
+
+  const selectedUser = users.value.find(
+    user => user.id === quickTask.value.assignedUserId
+  )
+
+  try {
+    await store.dispatch('tasks/addTask', {
+      title: quickTask.value.title,
+      description: quickTask.value.description,
+      status: quickTask.value.status || 'product-backlog',
+      assignedUserId: quickTask.value.assignedUserId || '',
+      assignedUserEmail: selectedUser?.email || '',
+      assignedById: userId.value,
+      assignedByEmail: email.value,
+      deadline: quickTask.value.deadline || '',
+      userId: userId.value,
+      token: token.value,
+      order: Date.now()
+    })
+
+    closeQuickTaskModal()
+  } catch (error) {
+    console.error(error)
+  }
+}
 
 async function removeTaskById(taskId) {
   if (deletingTaskIds.value.includes(taskId)) {
@@ -127,7 +261,7 @@ async function removeTaskById(taskId) {
   deletingTaskIds.value.push(taskId)
 
   try {
-    await store.dispatch('tasks/removeTask', {
+    await store.dispatch('tasks/deleteTask', {
       token: token.value,
       userId: userId.value,
       taskId
@@ -140,22 +274,20 @@ async function removeTaskById(taskId) {
 }
 
 
-const welcomeName = computed(() => {
-  if (!email.value) return ''
 
-  const namePart = email.value.split('@')[0]
-  return namePart.charAt(0).toUpperCase() + namePart.slice(1)
-})  
-
-onMounted(() => {
-  store.dispatch('tasks/fetchTasks', {
+onMounted(async () => {
+  await store.dispatch('tasks/fetchColumns', {
     token: token.value,
     userId: userId.value
   })
 
-  store.dispatch('tasks/fetchAssignedByMeTasks', {
+  await store.dispatch('tasks/fetchTasks', {
     token: token.value,
     userId: userId.value
+  })
+
+  await store.dispatch('tasks/fetchUsers', {
+    token: token.value
   })
 })
 </script>
@@ -187,7 +319,14 @@ onMounted(() => {
   color: #6b7280;
 }
 
-.add-task-btn {
+.header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.add-task-btn,
+.board-btn {
   text-decoration: none;
   background: #2563eb;
   color: white;
@@ -196,10 +335,20 @@ onMounted(() => {
   font-weight: 700;
   transition: 0.25s ease;
   white-space: nowrap;
+  border: none;
+  cursor: pointer;
+}
+
+.board-btn {
+  background: #111827;
 }
 
 .add-task-btn:hover {
   background: #1d4ed8;
+}
+
+.board-btn:hover {
+  background: #1f2937;
 }
 
 .stats-grid {
@@ -290,6 +439,10 @@ onMounted(() => {
   border: 1px solid #e5e7eb;
 }
 
+.task-main {
+  flex: 1;
+}
+
 .recent-task-item h4 {
   margin: 0 0 6px;
   color: #111827;
@@ -297,10 +450,25 @@ onMounted(() => {
 }
 
 .recent-task-item p {
-  margin: 0;
+  margin: 0 0 12px;
   color: #6b7280;
   line-height: 1.5;
   word-break: break-word;
+}
+
+.task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.meta-chip {
+  padding: 7px 10px;
+  background: #eef2ff;
+  color: #3730a3;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 .task-actions {
@@ -327,18 +495,6 @@ onMounted(() => {
 .status-badge.pending {
   background: #fef3c7;
   color: #92400e;
-}
-
-@media (max-width: 980px) {
-  .charts-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 768px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .delete-btn {
@@ -380,11 +536,108 @@ onMounted(() => {
   border: 1px dashed #d1d5db;
 }
 
-.list-link {
-  text-decoration: none;
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  z-index: 999;
 }
 
-/* Tablet */
+.task-modal {
+  width: 100%;
+  max-width: 640px;
+  background: white;
+  border-radius: 22px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.modal-header h2 {
+  margin: 0;
+}
+
+.close-btn,
+.primary-btn,
+.secondary-btn {
+  border: none;
+  border-radius: 12px;
+  padding: 11px 16px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.close-btn,
+.secondary-btn {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.primary-btn {
+  background: #2563eb;
+  color: #fff;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #374151;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 14px;
+  font: inherit;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 980px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 900px) {
   .dashboard-page {
     padding: 28px 14px 40px;
@@ -400,7 +653,6 @@ onMounted(() => {
   }
 }
 
-/* Mobile */
 @media (max-width: 640px) {
   .dashboard-page {
     padding: 22px 12px 32px;
@@ -414,7 +666,13 @@ onMounted(() => {
     font-size: 1.7rem;
   }
 
-  .add-task-btn {
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .add-task-btn,
+  .board-btn {
     width: 100%;
     text-align: center;
   }
@@ -432,9 +690,20 @@ onMounted(() => {
     justify-content: space-between;
     width: 100%;
   }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .modal-actions button {
+    width: 100%;
+  }
 }
 
-/* Small mobile */
 @media (max-width: 480px) {
   .dashboard-page {
     padding: 18px 10px 28px;
@@ -445,7 +714,8 @@ onMounted(() => {
   }
 
   .stat-card,
-  .content-card {
+  .content-card,
+  .task-modal {
     padding: 16px;
     border-radius: 16px;
   }

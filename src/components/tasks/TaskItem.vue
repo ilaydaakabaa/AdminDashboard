@@ -3,8 +3,8 @@
     <div class="task-top">
       <h3>{{ task.title }}</h3>
 
-      <span class="status-badge" :class="task.status === 'completed' ? 'completed' : 'pending'">
-        {{ task.status === 'completed' ? 'Tamamlandı' : 'Bekliyor' }}
+      <span class="status-badge" :class="task.status === 'done' ? 'completed' : 'pending'">
+        {{ statusLabel }}
       </span>
     </div>
 
@@ -15,28 +15,26 @@
         Son Tarih:
         <strong>{{ formattedDeadline }}</strong>
       </p>
+
       <p>
         Atayan:
         <strong>{{ task.assignedByEmail || 'Bilinmiyor' }}</strong>
       </p>
+
+      <p>
+        Atanan:
+        <strong>{{ task.assignedUserEmail || 'Atanmadı' }}</strong>
+      </p>
     </div>
 
     <div class="task-actions">
-      <template v-if="task.assignedById === task.assignedUserId">
-        <button class="edit-btn" @click="$emit('edit', task.id)">
-          Düzenle
-        </button>
-      </template>
-      <button class="toggle-btn" @click="$emit('toggle-status', task.id)">
-        {{ task.status === 'completed' ? 'Bekliyor Yap' : 'Tamamlandı Yap' }}
+      <button class="edit-btn" @click="$emit('edit', task.id)">
+        Düzenle
       </button>
-      <template v-if="task.assignedById === task.assignedUserId">
 
-      
       <button class="delete-btn" @click="$emit('delete', task.id)">
         Sil
       </button>
-      </template>
     </div>
   </article>
 </template>
@@ -59,7 +57,22 @@ const formattedDeadline = computed(() => {
   return new Date(props.task.deadline).toLocaleDateString('tr-TR')
 })
 
-defineEmits(['edit', 'toggle-status', 'delete'])
+const statusLabel = computed(() => {
+  switch (props.task.status) {
+    case 'product-backlog':
+      return 'Product Backlog'
+    case 'sprint-backlog':
+      return 'Sprint Backlog'
+    case 'test':
+      return 'Test'
+    case 'done':
+      return 'Tamamlandı'
+    default:
+      return props.task.status || 'Belirsiz'
+  }
+})
+
+defineEmits(['edit', 'delete'])
 </script>
 
 <style scoped>
@@ -102,7 +115,7 @@ defineEmits(['edit', 'toggle-status', 'delete'])
   font-size: 0.92rem;
 }
 
-.task-meta p+p {
+.task-meta p + p {
   margin-top: 6px;
 }
 
@@ -130,7 +143,6 @@ defineEmits(['edit', 'toggle-status', 'delete'])
 }
 
 .edit-btn,
-.toggle-btn,
 .delete-btn {
   border: none;
   padding: 10px 14px;
@@ -142,11 +154,6 @@ defineEmits(['edit', 'toggle-status', 'delete'])
 .edit-btn {
   background: #dbeafe;
   color: #1d4ed8;
-}
-
-.toggle-btn {
-  background: #ede9fe;
-  color: #6d28d9;
 }
 
 .delete-btn {

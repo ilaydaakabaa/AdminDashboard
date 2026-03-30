@@ -6,7 +6,6 @@
       :task="task"
       @delete="$emit('delete-task', $event)"
       @edit="$emit('edit-task', $event)"
-      @toggle-status="$emit('toggle-task-status', $event)"
     />
   </div>
 </template>
@@ -21,7 +20,7 @@ defineProps({
   }
 })
 
-defineEmits(['delete-task', 'edit-task', 'toggle-task-status'])
+defineEmits(['delete-task', 'edit-task'])
 </script>
 
 <style scoped>

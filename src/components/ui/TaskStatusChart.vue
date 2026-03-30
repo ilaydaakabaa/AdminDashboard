@@ -14,11 +14,19 @@ import * as echarts from 'echarts'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const props = defineProps({
-  completed: {
+  productBacklog: {
     type: Number,
     default: 0
   },
-  pending: {
+  sprintBacklog: {
+    type: Number,
+    default: 0
+  },
+  test: {
+    type: Number,
+    default: 0
+  },
+  done: {
     type: Number,
     default: 0
   }
@@ -28,7 +36,12 @@ const chartRef = ref(null)
 let chartInstance = null
 
 function getChartOptions() {
-  const total = props.completed + props.pending
+  const total =
+    props.productBacklog +
+    props.sprintBacklog +
+    props.test +
+    props.done
+
   const hasData = total > 0
 
   return {
@@ -57,17 +70,31 @@ function getChartOptions() {
         data: hasData
           ? [
               {
-                value: props.completed,
-                name: 'Tamamlanan',
+                value: props.productBacklog,
+                name: 'Product Backlog',
                 itemStyle: {
                   color: '#16a34a'
                 }
               },
               {
-                value: props.pending,
-                name: 'Bekleyen',
+                value: props.sprintBacklog,
+                name: 'Sprint Backlog',
                 itemStyle: {
                   color: '#f59e0b'
+                }
+              },
+              {
+                value: props.test,
+                name: 'Test',
+                itemStyle: {
+                  color: '#3b82f6'
+                }
+              },
+              {
+                value: props.done,
+                name: 'Tamamlandı',
+                itemStyle: {
+                  color: '#10b981'
                 }
               }
             ]
@@ -109,7 +136,7 @@ onMounted(() => {
 })
 
 watch(
-  () => [props.completed, props.pending],
+  () => [props.productBacklog, props.sprintBacklog, props.test, props.done],
   () => {
     renderChart()
   }
