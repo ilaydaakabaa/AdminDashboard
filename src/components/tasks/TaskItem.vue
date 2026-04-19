@@ -3,11 +3,11 @@
     <div class="task-top">
       <h3>{{ task.title }}</h3>
 
-      <span class="status-badge" :class="task.status === 'done' ? 'completed' : 'pending'">
-        {{ statusLabel }}
-      </span>
+      <TaskMetaChip :variant="task.status">
+  {{ statusLabel }}
+</TaskMetaChip>
     </div>
-
+    
     <p class="task-description">{{ task.description }}</p>
 
     <div class="task-meta">
@@ -15,12 +15,10 @@
         Son Tarih:
         <strong>{{ formattedDeadline }}</strong>
       </p>
-
       <p>
         Atayan:
         <strong>{{ task.assignedByEmail || 'Bilinmiyor' }}</strong>
       </p>
-
       <p>
         Atanan:
         <strong>{{ task.assignedUserEmail || 'Atanmadı' }}</strong>
@@ -28,20 +26,21 @@
     </div>
 
     <div class="task-actions">
-      <button class="edit-btn" @click="$emit('edit', task.id)">
+      <!-- <button class="edit-btn" @click="$emit('update', task.id)">
         Düzenle
-      </button>
+      </button> -->
 
       <button class="delete-btn" @click="$emit('delete', task.id)">
         Sil
       </button>
+      
     </div>
   </article>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-
+import TaskMetaChip from '@/components/ui/TaskMetaChip.vue'
 const props = defineProps({
   task: {
     type: Object,
@@ -66,13 +65,13 @@ const statusLabel = computed(() => {
     case 'test':
       return 'Test'
     case 'done':
-      return 'Tamamlandı'
+      return 'Done'
     default:
       return props.task.status || 'Belirsiz'
   }
 })
 
-defineEmits(['edit', 'delete'])
+defineEmits(['update', 'delete'])
 </script>
 
 <style scoped>
@@ -119,22 +118,6 @@ defineEmits(['edit', 'delete'])
   margin-top: 6px;
 }
 
-.status-badge {
-  padding: 8px 12px;
-  border-radius: 999px;
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.completed {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.pending {
-  background: #fef3c7;
-  color: #92400e;
-}
 
 .task-actions {
   display: flex;

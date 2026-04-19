@@ -5,7 +5,7 @@
       :key="task.id"
       :task="task"
       @delete="$emit('delete-task', $event)"
-      @edit="$emit('edit-task', $event)"
+     
     />
   </div>
 </template>
@@ -20,7 +20,7 @@ defineProps({
   }
 })
 
-defineEmits(['delete-task', 'edit-task'])
+defineEmits(['delete-task'])
 </script>
 
 <style scoped>

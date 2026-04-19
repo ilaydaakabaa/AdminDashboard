@@ -2,8 +2,8 @@
   <section class="tasks-page">
     <div class="tasks-header">
       <div>
-        <h1>Görevlerim</h1>
-        <p>Tüm görevlerini buradan takip edebilirsin.</p>
+        <h1>Tüm Görevler</h1>
+        <p>Board’undaki tüm görevleri buradan takip edebilirsin.</p>
       </div>
 
       <router-link to="/tasks/new" class="add-task-btn">
@@ -11,11 +11,15 @@
       </router-link>
     </div>
 
+    <div v-if="tasks.length === 0" class="empty-state">
+      Henüz görev bulunmuyor.
+    </div>
+
     <TaskList
-      :tasks="tasks"
+      v-else
+      :tasks="sortedTasks"
       @delete-task="removeTaskById"
-      @edit-task="goToEditPage"
-      @toggle-task-status="toggleTaskStatus"
+      
     />
   </section>
 </template>
@@ -31,34 +35,38 @@ const router = useRouter()
 
 const token = computed(() => store.getters['auth/token'])
 const userId = computed(() => store.getters['auth/userId'])
-const tasks = computed(() => store.getters['tasks/myTasks'])
-async function removeTaskById(taskId) {
+
+// Artık sadece bana atananları değil, board'daki tüm taskları alıyoruz
+const tasks = computed(() => store.getters['tasks/tasks'] || [])
+
+const sortedTasks = computed(() => {
+  return [...tasks.value].sort((a, b) => {
+    const aTime = a.createdAt ?? 0
+    const bTime = b.createdAt ?? 0
+    return bTime - aTime
+  })
+})
+
+async function removeTaskById(taskId, ownerUserId) {
   try {
-    await store.dispatch('tasks/removeTask', {
+    await store.dispatch('tasks/deleteTask', {
       token: token.value,
       userId: userId.value,
-      taskId
+      taskId,
+      ownerUserId
     })
   } catch (error) {
-    console.error(error)
+    error.value = error.message || 'Görev silinemedi.'
   }
 }
 
-async function toggleTaskStatus(taskId) {
-  try {
-    await store.dispatch('tasks/toggleTaskStatus', taskId)
-  } catch (error) {
-    console.error(error)
-  }
-}
-
-function goToEditPage(taskId) {
-  router.push(`/tasks/${taskId}/edit`)
- }
+// function goToEditPage(taskId) {
+//   router.push(`/tasks/${taskId}/edit`)
+// }
 
 onMounted(async () => {
   try {
-    await store.dispatch('tasks/fetchTasks', {
+    await store.dispatch('tasks/fetchVisibleTasks', {
       token: token.value,
       userId: userId.value
     })
@@ -107,5 +115,13 @@ onMounted(async () => {
 
 .add-task-btn:hover {
   background: #1d4ed8;
+}
+
+.empty-state {
+  padding: 18px;
+  border-radius: 14px;
+  background: #f9fafb;
+  color: #6b7280;
+  border: 1px dashed #d1d5db;
 }
 </style>

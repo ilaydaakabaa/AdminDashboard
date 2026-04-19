@@ -65,7 +65,10 @@ async function handleEditTask(taskData) {
       assignedUserId: taskData.assignedUserId,
       deadline: taskData.deadline,
       token: token.value,
-      userId: userId.value
+      userId: userId.value,
+      assignedById: task.value.assignedById,
+      ownerUserId: task.value.ownerUserId
+
     })
 
     router.push('/tasks')

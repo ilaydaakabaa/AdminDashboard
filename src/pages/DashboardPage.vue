@@ -39,7 +39,11 @@
         <TaskStatusChart :product-backlog="productBacklogTasks.length" :sprint-backlog="sprintBacklogTasks.length"
           :test="testTasks.length" :done="doneTasks.length" />
 
-        <AssignedCompletedChart :assigned="assignedByMeTasks.length" :completed-assigned="completedAssignedByMeTasks" />
+        <AssignedCompletedChart :gorevler="assignedByMeTasks.length" :done="completedAssignedByMeTasks" />
+
+        <MyAssignmentStatusChart :product-backlog="assignedToMeProductBacklogTasks.length"
+          :sprint-backlog="assignedToMeSprintBacklogTasks.length" :test="assignedToMeTestTasks.length"
+          :done="assignedToMeDoneTasks.length" />
       </div>
 
       <div class="content-card">
@@ -59,27 +63,27 @@
               <p>{{ task.description || 'Açıklama yok.' }}</p>
 
               <div class="task-meta">
-                <span class="meta-chip">
-                  Kolon: {{ getColumnTitle(task.status) }}
-                </span>
+                <TaskMetaChip :variant="task.status">
+                  {{ getColumnTitle(task.status) }}
+                </TaskMetaChip>
 
-                <span class="meta-chip" v-if="task.assignedUserEmail">
+                <TaskMetaChip v-if="task.assignedUserEmail" variant="default">
                   Atanan: {{ task.assignedUserEmail }}
-                </span>
+                </TaskMetaChip>
 
-                <span class="meta-chip" v-if="task.deadline">
+                <TaskMetaChip v-if="task.deadline" variant="default">
                   Bitiş: {{ task.deadline }}
-                </span>
+                </TaskMetaChip>
               </div>
             </div>
 
             <div class="task-actions">
-              <span class="status-badge" :class="task.status === 'done' ? 'completed' : 'pending'">
+              <!-- <span class="status-badge" :class="task.status === 'done' ? 'completed' : 'pending'">
                 {{ task.status === 'done' ? 'Tamamlandı' : getColumnTitle(task.status) }}
-              </span>
+              </span> -->
 
               <button class="delete-btn" type="button" :disabled="deletingTaskIds.includes(task.id)"
-                aria-label="Görevi sil" @click="removeTaskById(task.id)">
+                aria-label="Görevi sil" @click="removeTaskById(task.id, task.ownerUserId)">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <path d="M9 3h6m-9 4h12m-1 0-.84 12.15a2 2 0 0 1-2 1.85h-4.32a2 2 0 0 1-2-1.85L6 7m4 4v6m4-6v6"
                     stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
@@ -156,6 +160,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useStore } from 'vuex'
 import TaskStatusChart from '@/components/ui/TaskStatusChart.vue'
 import AssignedCompletedChart from '@/components/ui/AssignedCompletedChart.vue'
+import MyAssignmentStatusChart from '@/components/ui/MyAssignmentStatusChart.vue'
+import TaskMetaChip from '@/components/ui/TaskMetaChip.vue'
 
 const store = useStore()
 
@@ -173,7 +179,6 @@ const productBacklogTasks = computed(() => store.getters['tasks/productBacklogTa
 const sprintBacklogTasks = computed(() => store.getters['tasks/sprintBacklogTasks'] || [])
 const testTasks = computed(() => store.getters['tasks/testTasks'] || [])
 const doneTasks = computed(() => store.getters['tasks/doneTasks'] || [])
-
 const deletingTaskIds = ref([])
 const showQuickTaskModal = ref(false)
 
@@ -204,7 +209,25 @@ const welcomeName = computed(() => {
   const namePart = email.value.split('@')[0]
   return namePart.charAt(0).toUpperCase() + namePart.slice(1)
 })
+const assignedToMeTasks = computed(() => {
+  return tasks.value.filter(task => task.assignedUserId === userId.value)
+})
 
+const assignedToMeProductBacklogTasks = computed(() => {
+  return assignedToMeTasks.value.filter(task => task.status === 'product-backlog')
+})
+
+const assignedToMeSprintBacklogTasks = computed(() => {
+  return assignedToMeTasks.value.filter(task => task.status === 'sprint-backlog')
+})
+
+const assignedToMeTestTasks = computed(() => {
+  return assignedToMeTasks.value.filter(task => task.status === 'test')
+})
+
+const assignedToMeDoneTasks = computed(() => {
+  return assignedToMeTasks.value.filter(task => task.status === 'done')
+})
 function getColumnTitle(columnId) {
   const foundColumn = columns.value.find(column => column.id === columnId)
   return foundColumn ? foundColumn.title : columnId
@@ -253,7 +276,7 @@ async function createQuickTask() {
   }
 }
 
-async function removeTaskById(taskId) {
+async function removeTaskById(taskId, ownerUserId) {
   if (deletingTaskIds.value.includes(taskId)) {
     return
   }
@@ -264,7 +287,8 @@ async function removeTaskById(taskId) {
     await store.dispatch('tasks/deleteTask', {
       token: token.value,
       userId: userId.value,
-      taskId
+      taskId,
+      ownerUserId
     })
   } catch (error) {
     console.error(error)
@@ -281,7 +305,7 @@ onMounted(async () => {
     userId: userId.value
   })
 
-  await store.dispatch('tasks/fetchTasks', {
+  await store.dispatch('tasks/fetchVisibleTasks', {
     token: token.value,
     userId: userId.value
   })

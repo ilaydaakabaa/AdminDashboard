@@ -1,11 +1,15 @@
 <template>
   <div class="content-card task-chart-card">
     <div class="card-header task-chart-header">
-      <h2>Görev Durumu</h2>
-      <span>Canlı dağılım</span>
+      <h2>Bana Atanan Görevler</h2>
+      <span>Üzerimdeki görevlerin durum dağılımı</span>
     </div>
 
-    <div ref="chartRef" class="task-chart" aria-label="Görev durum grafiği"></div>
+    <div
+      ref="chartRef"
+      class="task-chart"
+      aria-label="Bana atanan görevlerin durum grafiği"
+    ></div>
   </div>
 </template>
 
@@ -54,7 +58,7 @@ function getChartOptions() {
     },
     series: [
       {
-        name: 'Görevler',
+        name: 'Bana Atanan Görevler',
         type: 'pie',
         radius: ['48%', '72%'],
         center: ['50%', '46%'],
@@ -68,54 +72,52 @@ function getChartOptions() {
           show: hasData
         },
         data: hasData
-  ? [
-      {
-        value: props.productBacklog,
-        name: 'Product Backlog',
-        itemStyle: {
-          color: '#3b82f6'
-        }
-      },
-      {
-        value: props.sprintBacklog,
-        name: 'Sprint Backlog',
-        itemStyle: {
-          color: '#f59e0b'
-        }
-      },
-      {
-        value: props.test,
-        name: 'Test',
-        itemStyle: {
-          color: '#8b5cf6'
-        }
-      },
-      {
-        value: props.done,
-        name: 'Tamamlandı',
-        itemStyle: {
-          color: '#10b981'
-        }
-      }
-    ]
-  : [
-      {
-        value: 1,
-        name: 'Görev Yok',
-        itemStyle: {
-          color: '#cbd5e1'
-        }
-      }
-    ]
+          ? [
+              {
+                value: props.productBacklog,
+                name: 'Product Backlog',
+                itemStyle: {
+                  color: '#3b82f6'
+                }
+              },
+              {
+                value: props.sprintBacklog,
+                name: 'Sprint Backlog',
+                itemStyle: {
+                  color: '#f59e0b'
+                }
+              },
+              {
+                value: props.test,
+                name: 'Test',
+                itemStyle: {
+                  color: '#8b5cf6'
+                }
+              },
+              {
+                value: props.done,
+                name: 'Done',
+                itemStyle: {
+                  color: '#10b981'
+                }
+              }
+            ]
+          : [
+              {
+                value: 1,
+                name: 'Görev Yok',
+                itemStyle: {
+                  color: '#cbd5e1'
+                }
+              }
+            ]
       }
     ]
   }
 }
 
 function renderChart() {
-  if (!chartRef.value) {
-    return
-  }
+  if (!chartRef.value) return
 
   if (!chartInstance) {
     chartInstance = echarts.init(chartRef.value)

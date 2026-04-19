@@ -2,14 +2,14 @@
   <div class="content-card task-chart-card">
     <div class="card-header task-chart-header">
       <h2>Atadığım ve Biten Görevler</h2>
-      <span>Verilen Görevler içindeki Tamamlanma Durumu</span>
+      <span>Atadığın görevler ve bunların tamamlanan sayısı</span>
       <!-- <p class="quick-stats">
         Atadığım: <strong>{{ props.assigned }}</strong> | Biten:
         <strong>{{ props.completedAssigned }}</strong>
       </p> -->
     </div>
 
-    <div ref="chartRef" class="task-chart" aria-label="Atanan ve biten görev grafiği"></div>
+    <div ref="chartRef" class="task-chart" aria-label="Atadigim ve biten gorev grafigi"></div>
   </div>
 </template>
 
@@ -18,11 +18,11 @@ import * as echarts from 'echarts'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const props = defineProps({
-  assigned: {
+  gorevler: {
     type: Number,
     default: 0
   },
-  completedAssigned: {
+  done: {
     type: Number,
     default: 0
   }
@@ -32,8 +32,8 @@ const chartRef = ref(null)
 let chartInstance = null
 
 function getChartOptions() {
-  const hasData = props.assigned > 0 || props.completedAssigned > 0
-  const maxValue = Math.max(props.assigned, props.completedAssigned)
+  const hasData = props.gorevler > 0 || props.done > 0
+  const maxValue = Math.max(props.gorevler, props.done )
 
   return {
     tooltip: {
@@ -51,7 +51,7 @@ function getChartOptions() {
     },
     xAxis: {
       type: 'category',
-      data: ['Atadığım', 'Biten'],
+      data: ['Atadığım', 'Tamamlanan'],
       axisTick: {
         show: false // çeltik kaldırıyor
       }
@@ -69,11 +69,11 @@ function getChartOptions() {
         data: hasData
           ? [
               {
-                value: props.assigned,
+                value: props.gorevler,
                 itemStyle: { color: '#2563eb' }
               },
               {
-                value: props.completedAssigned,
+                value: props.done,
                 itemStyle: { color: '#16a34a' }
               }
             ]
@@ -127,7 +127,7 @@ onMounted(() => {
 })
 
 watch(
-  () => [props.assigned, props.completedAssigned],
+  () => [props.gorevler, props.done],
   () => {
     renderChart()
   }

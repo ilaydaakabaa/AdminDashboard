@@ -86,7 +86,7 @@ async function submitLogin() {
       password: password.value
     })
 
-    router.push('/dashboard')
+    router.push('/home')
   } catch (err) {
     error.value = getFirebaseErrorMessage(err.message)
   } finally {
